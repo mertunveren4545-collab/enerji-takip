@@ -158,6 +158,34 @@
   .gauge{ height:8px; background:var(--panel-2); border-radius:8px; overflow:hidden; margin:12px 0 14px; }
   .gauge-fill{ height:100%; border-radius:8px; }
   .score-note{ font-size:.76rem; color:var(--muted); line-height:1.55; margin:4px 0 0; }
+  /* OEE / MES rapor */
+  .rep-head{ display:flex; align-items:center; gap:13px; padding:15px 17px; margin:8px 0 16px; border-radius:var(--r); background:linear-gradient(135deg,var(--panel-2),var(--panel)); border:1px solid var(--line); position:relative; overflow:hidden; }
+  .rep-head::after{ content:""; position:absolute; inset:0; background:radial-gradient(130% 150% at 0% 0%, color-mix(in srgb,var(--accent) 15%,transparent), transparent 58%); pointer-events:none; }
+  .rep-mark{ width:40px; height:40px; flex:none; border-radius:12px; display:grid; place-items:center; color:#1a1206; background:linear-gradient(160deg,var(--gold),var(--accent)); box-shadow:0 5px 18px color-mix(in srgb,var(--accent) 42%,transparent); position:relative; z-index:1; }
+  .rep-ttl{ display:flex; flex-direction:column; line-height:1.18; flex:1; min-width:0; position:relative; z-index:1; }
+  .rep-ttl b{ font-family:var(--font-d); font-weight:600; font-size:1.06rem; letter-spacing:.03em; }
+  .rep-ttl span{ font-size:.71rem; color:var(--muted); letter-spacing:.02em; }
+  .rep-head .xbtn{ position:relative; z-index:1; }
+  .kpi-row{ display:grid; grid-template-columns:repeat(2,1fr); gap:11px; margin-bottom:16px; }
+  .kpi{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:13px 15px; display:flex; flex-direction:column; gap:3px; }
+  .kpi-l{ font-size:.69rem; color:var(--muted); letter-spacing:.02em; }
+  .kpi b{ font-family:var(--font-d); font-size:1.65rem; font-weight:500; line-height:1; color:var(--fg); }
+  .kpi-u{ font-size:.64rem; color:var(--faint); letter-spacing:.03em; }
+  .oee-wrap{ display:flex; align-items:center; gap:20px; }
+  .oee-ring{ --v:0; width:128px; height:128px; flex:none; border-radius:50%; background:conic-gradient(var(--sc,var(--accent)) calc(var(--v)*1%), var(--panel-2) 0); position:relative; transition:background .7s cubic-bezier(.4,0,.2,1); }
+  .oee-ring::before{ content:""; position:absolute; inset:0; border-radius:50%; box-shadow:inset 0 0 20px color-mix(in srgb,var(--sc,var(--accent)) 32%,transparent); }
+  .oee-hole{ position:absolute; inset:14px; border-radius:50%; background:var(--panel); display:grid; place-items:center; text-align:center; }
+  .oee-hole b{ font-family:var(--font-d); font-size:2rem; font-weight:600; color:var(--sc,var(--accent)); line-height:1; }
+  .oee-hole span{ font-size:.65rem; color:var(--muted); margin-top:2px; }
+  .oee-side{ flex:1; min-width:0; }
+  .oee-verdict{ display:inline-block; font-size:.73rem; font-weight:600; padding:4px 11px; border-radius:999px; margin-bottom:12px; }
+  .split{ display:flex; height:9px; border-radius:6px; overflow:hidden; background:var(--panel-2); margin-bottom:8px; }
+  .split-u{ background:var(--ok); transition:width .6s ease; } .split-w{ background:var(--busy); transition:width .6s ease; }
+  .split-leg{ display:flex; gap:18px; font-size:.72rem; color:var(--muted); margin-bottom:10px; }
+  .split-leg i{ display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:5px; vertical-align:middle; }
+  .split-leg .d-u{ background:var(--ok); } .split-leg .d-w{ background:var(--busy); }
+  .split-leg b{ color:var(--fg); font-weight:600; }
+  @media(max-width:390px){ .oee-wrap{ flex-direction:column; gap:16px; } .oee-side{ width:100%; } }
   .rank{ display:flex; flex-direction:column; gap:12px; }
   .rank-row{ display:grid; grid-template-columns:100px 1fr auto; align-items:center; gap:12px; }
   .rank-name{ font-size:.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -180,7 +208,7 @@
   .xbtn:hover{ border-color:var(--accent); box-shadow:0 0 16px -4px color-mix(in srgb,var(--accent) 55%,transparent); }
 
   :root.pv .fil-svg text, :root.pv .bar-val, :root.pv .donut .hole b, :root.pv .leg-val,
-  :root.pv .leg-pct, :root.pv .rank-val, :root.pv .alarm .aw, :root.pv .dd-stat b{
+  :root.pv .leg-pct, :root.pv .rank-val, :root.pv .alarm .aw, :root.pv .dd-stat b, :root.pv .kpi b{
     filter:blur(6px); -webkit-filter:blur(6px); user-select:none;
   }
 
@@ -275,12 +303,31 @@
   </section>
 
   <section id="v-report" hidden>
-    <div class="sec-t" style="margin-top:8px"><h2>Rapor</h2><button class="xbtn" id="xlsBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Excel</button></div>
+    <div class="rep-head">
+      <div class="rep-mark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/></svg></div>
+      <div class="rep-ttl"><b>VERİMLİLİK RAPORU</b><span id="repPeriod">—</span></div>
+      <button class="xbtn" id="xlsBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Excel</button>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><span class="kpi-l">Toplam tüketim</span><b id="kToplam">0</b><span class="kpi-u">kWh</span></div>
+      <div class="kpi"><span class="kpi-l">Tahmini maliyet</span><b id="kMaliyet">0</b><span class="kpi-u">₺</span></div>
+      <div class="kpi"><span class="kpi-l">Boşa çalışma</span><b id="kBosa">0</b><span class="kpi-u">saat</span></div>
+      <div class="kpi"><span class="kpi-l">İzlenen cihaz</span><b id="kCihaz">0</b><span class="kpi-u">adet</span></div>
+    </div>
     <div class="card"><div class="card-h"><h3>Günlük tüketim</h3><span class="u">kWh</span></div><div class="chart" id="chart"></div></div>
     <div class="card"><div class="card-h"><h3>Cihaz dağılımı</h3><span class="u">kWh payı</span></div><div class="donut-wrap"><div class="donut" id="donut"><div class="hole"><b id="donutTot">0</b><span>kWh</span></div></div><div class="legend" id="legend"></div></div></div>
-    <div class="card"><div class="card-h"><h3>Verimlilik</h3><span class="u">aydınlatma + TV</span></div><div class="score-top"><span class="score-num" id="scoreNum">0%</span><span class="score-cap">faydalı kullanım</span></div><div class="gauge"><div class="gauge-fill" id="gauge" style="width:0%"></div></div><p class="score-note">Evde ve karanlıkta geçen süre faydalı, gündüz veya kimse evde yokken açık kalan süre kayıp sayılır. Sürekli çalışan temel yükler hariç.</p></div>
+    <div class="card oee-card"><div class="card-h"><h3>Enerji verimlilik skoru</h3><span class="u">OEE uyarlaması · hedef %85</span></div>
+      <div class="oee-wrap">
+        <div class="oee-ring" id="oeeRing"><div class="oee-hole"><b id="oeeNum">0%</b><span>faydalı</span></div></div>
+        <div class="oee-side">
+          <span class="oee-verdict" id="oeeVerdict">—</span>
+          <div class="split"><div class="split-u" id="splitUseful" style="width:0%"></div><div class="split-w" id="splitWaste" style="width:0%"></div></div>
+          <div class="split-leg"><span><i class="d-u"></i>Faydalı <b id="splitUtxt">0 sa</b></span><span><i class="d-w"></i>Boşa <b id="splitWtxt">0 sa</b></span></div>
+          <p class="score-note">Karanlıkta ve evdeyken açık kalan süre faydalı; gündüz veya kimse evde yokken açık kalan süre kayıp sayılır. Sürekli çalışan temel yükler hariç.</p>
+        </div>
+      </div></div>
     <div class="card"><div class="card-h"><h3>En çok tüketen</h3><span class="u">kuruluştan bu yana</span></div><div class="rank" id="rank"></div></div>
-    <p class="proto">Prototip · örnek veri</p>
+    <p class="proto">Prototip · örnek veri · sürüm 5</p>
   </section>
 
   <section id="v-alarms" hidden>
@@ -537,8 +584,21 @@
     document.getElementById("legend").innerHTML=devices.map(function(d,i){return '<div class="leg-row"><span class="leg-dot" style="background:'+COLORS[i%6]+'"></span><span class="leg-name">'+esc(d.name)+'</span><span class="leg-val">'+kwhs[i].toFixed(2)+' kWh</span><span class="leg-pct">'+(kwhs[i]/total*100).toFixed(0)+'%</span></div>';}).join("");
     var u=0,wa=0;history.forEach(function(day){devices.forEach(function(d){if(cfg(d).kind==="light"){var e=day.dev[d.id];if(e){u+=e.useful;wa+=e.waste;}}});});
     var sc=(u+wa)>0?u/(u+wa)*100:0,scol=sc>=85?"var(--calm)":sc>=70?"var(--warnc)":"var(--busy)";
-    var sn=document.getElementById("scoreNum");sn.textContent=Math.round(sc)+"%";sn.style.color=scol;
-    var gf=document.getElementById("gauge");gf.style.width=sc.toFixed(0)+"%";gf.style.background=scol;
+    var ring=document.getElementById("oeeRing"); ring.style.setProperty("--v",sc.toFixed(0)); ring.style.setProperty("--sc",scol);
+    document.getElementById("oeeNum").textContent=Math.round(sc)+"%";
+    var vd=document.getElementById("oeeVerdict"), lbl=sc>=85?"İYİ":sc>=70?"ORTA":"DÜŞÜK";
+    vd.textContent=lbl; vd.style.color=scol; vd.style.background="color-mix(in srgb,"+scol+" 16%,transparent)";
+    var tt=u+wa, up=tt>0?u/tt*100:0;
+    document.getElementById("splitUseful").style.width=up.toFixed(0)+"%";
+    document.getElementById("splitWaste").style.width=(100-up).toFixed(0)+"%";
+    document.getElementById("splitUtxt").textContent=u.toFixed(1)+" sa";
+    document.getElementById("splitWtxt").textContent=wa.toFixed(1)+" sa";
+    var sumAll=totals.reduce(function(a,b){return a+b;},0);
+    document.getElementById("kToplam").textContent=sumAll.toFixed(1);
+    document.getElementById("kMaliyet").textContent=Math.round(sumAll*PRICE);
+    document.getElementById("kBosa").textContent=wa.toFixed(1);
+    document.getElementById("kCihaz").textContent=devices.length;
+    if(history.length){var a=history[0].date.split("-"),z=history[history.length-1].date.split("-");document.getElementById("repPeriod").textContent=(+a[2])+" "+MON[(+a[1])-1]+" – "+(+z[2])+" "+MON[(+z[1])-1]+" "+z[0];}
     var rows=devices.slice().sort(function(a,b){return totalKwhOf(b.id)-totalKwhOf(a.id);});
     var mk=Math.max.apply(null,devices.map(function(d){return totalKwhOf(d.id);}).concat([0.001]));
     document.getElementById("rank").innerHTML=rows.map(function(d){var i=devices.indexOf(d),v=totalKwhOf(d.id),wd=Math.round(v/mk*100);return '<div class="rank-row"><span class="rank-name">'+esc(d.name)+'</span><div class="rank-track"><div class="rank-fill" style="width:'+wd+'%;background:'+COLORS[i%6]+'"></div></div><span class="rank-val">'+v.toFixed(2)+' kWh</span></div>';}).join("");
