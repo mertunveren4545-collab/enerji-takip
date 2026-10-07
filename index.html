@@ -271,7 +271,7 @@
     <div class="sec-t"><h2>Cihazlar</h2><span class="u" id="devCount"></span></div>
     <div class="dlist" id="devList"></div>
     <button class="add-dev" id="addBtn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Cihaz ekle</button>
-    <p class="proto">Prototip · sürüm 4 · Akhisar güneş verisiyle</p>
+    <p class="proto">Prototip · sürüm 5 · Akhisar güneş verisiyle</p>
   </section>
 
   <section id="v-report" hidden>
@@ -296,7 +296,7 @@
   <button data-v="alarms"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>Uyarılar</button>
 </div></nav>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script>
 (function(){
   "use strict";
@@ -598,28 +598,141 @@
     },2000);
   });
 
-  // Excel çıktısı
-  function exportXls(){
-    if(typeof XLSX==="undefined"){ showToast("Excel aracı yükleniyor, tekrar dene"); return; }
-    var head=["Tarih","Gün"]; devices.forEach(function(d){head.push(d.name+" (kWh)");}); head.push("Toplam kWh","Maliyet (₺)");
-    var rows=[head];
-    history.forEach(function(day){
-      var p=day.date.split("-"), g=new Date(+p[0],+p[1]-1,+p[2]).getDay(), tot=0, row=[day.date, DOW[g]];
-      devices.forEach(function(d){var k=day.dev[d.id]?day.dev[d.id].kwh:0; row.push(+k.toFixed(3)); tot+=k;});
-      row.push(+tot.toFixed(3), +(tot*PRICE).toFixed(2)); rows.push(row);
+  // Excel çıktısı — amblemli, antetli, renkli (ExcelJS)
+  var XC={ band:"FF17120B", bandTxt:"FFFBF4E8", amber:"FFE08A12", amberSoft:"FFFBEFD8",
+           head:"FF2A2117", headTxt:"FFFBF4E8", zebra:"FFFAF6EF", line:"FFE7E0D4",
+           wasteFill:"FFFBE3E0", wasteTxt:"FFB42318", okFill:"FFE9F5EE", okTxt:"FF1E7A48",
+           muted:"FF8A8172", ink:"FF2A2117" };
+  function colL(n){ var s=""; while(n>0){ var m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26);} return s; }
+  function hm(x){ if(x<0)x=0; if(x>24)x=24; var h=Math.floor(x),m=Math.round((x-h)*60); if(m===60){h++;m=0;} return ("0"+h).slice(-2)+":"+("0"+m).slice(-2); }
+  function winFor(o){ var first=sameDay(o,START_DAY), today=sameDay(o,new Date()); return {lo:first?21:0, hi:today?(new Date().getHours()+new Date().getMinutes()/60):24}; }
+  function sessionsFor(d,o){
+    var c=cfg(d); if(c.always) return [];
+    var w=winFor(o), segs=segmentsFor(d,o), out=[];
+    segs.forEach(function(sg){
+      var s=Math.max(sg.s,w.lo), e=Math.min(sg.s+sg.d,w.hi); if(e-s<=0.004) return;
+      var bf=sg.bf!=null?sg.bf:1, film=((d.role||d.type)==="salon")&&bf<0.3;
+      out.push({s:s,e:e,dur:e-s,u:sg.u,film:film,kwh:c.w*bf*(e-s)/1000});
     });
-    var totals=history.map(dayTotalKwh), sum=totals.reduce(function(a,b){return a+b;},0), avg=history.length?sum/history.length:0;
-    var blank=devices.map(function(){return "";});
-    rows.push([]);
-    rows.push(["Toplam",""].concat(blank).concat([+sum.toFixed(3), +(sum*PRICE).toFixed(2)]));
-    rows.push(["Günlük ortalama",""].concat(blank).concat([+avg.toFixed(3), +(avg*PRICE).toFixed(2)]));
-    rows.push(["Aylık tahmin (ort × 30)",""].concat(blank).concat([+(avg*30).toFixed(1), +(avg*30*PRICE).toFixed(2)]));
-    rows.push(["Tarife (₺/kWh)",""].concat(blank).concat([PRICE,""]));
-    var ws=XLSX.utils.aoa_to_sheet(rows);
-    ws["!cols"]=[{wch:12},{wch:6}].concat(devices.map(function(){return {wch:14};})).concat([{wch:12},{wch:12}]);
-    var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Enerji");
-    try{ XLSX.writeFile(wb,"enerji-takip.xlsx"); showToast("Excel indirildi"); }
-    catch(e){ showToast("İndirme bu önizlemede engelli — kendi sitende çalışır"); }
+    out.sort(function(a,b){return a.s-b.s;}); return out;
+  }
+  function daySummary(d,o){
+    if(cfg(d).always){ var w=winFor(o); return {range:"sürekli · temel yük",on:Math.max(0,w.hi-w.lo),waste:0,wrange:"",film:false}; }
+    var ss=sessionsFor(d,o),on=0,waste=0,parts=[],wparts=[],film=false,blips=0;
+    ss.forEach(function(x){ on+=x.dur; if(!x.u)waste+=x.dur; if(x.film)film=true;
+      if(x.dur<0.25) blips++; else parts.push(hm(x.s)+"–"+hm(x.e));
+      if(!x.u) wparts.push(hm(x.s)+"–"+hm(x.e)); });
+    var txt=parts.join("   "); if(blips>0)txt+=(txt?"   ":"")+"+"+blips+" kısa"; if(film)txt+="  🎬";
+    return {range:txt||"—",on:on,waste:waste,wrange:wparts.join("   "),film:film};
+  }
+  function thinAll(){ return {top:{style:"thin",color:{argb:XC.line}},bottom:{style:"thin",color:{argb:XC.line}},left:{style:"thin",color:{argb:XC.line}},right:{style:"thin",color:{argb:XC.line}}}; }
+
+  async function exportXls(){
+    if(typeof ExcelJS==="undefined"){ showToast("Excel aracı yükleniyor, tekrar dene"); return; }
+    try{
+      var now=new Date();
+      var wb=new ExcelJS.Workbook(); wb.creator="Enerji Takip"; wb.created=now;
+      var href=(document.querySelector('link[rel="apple-touch-icon"]')||{}).href||"";
+      var b64=href.indexOf(",")>-1?href.split(",")[1]:""; var logoId=b64?wb.addImage({base64:b64,extension:"png"}):null;
+      var range=(history.length?history[0].date+" → "+history[history.length-1].date:"");
+      var stamp=now.toLocaleString("tr-TR",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
+
+      // antet bandı — her sayfaya
+      function letterhead(ws,N,subtitle){
+        var last=colL(N);
+        for(var r=1;r<=3;r++){ ws.getRow(r); for(var c=1;c<=N;c++){ var cl=ws.getCell(r,c); cl.fill={type:"pattern",pattern:"solid",fgColor:{argb:XC.band}}; } }
+        if(logoId) ws.addImage(logoId,{tl:{col:0.28,row:0.34},ext:{width:48,height:48}});
+        ws.mergeCells("C1:"+last+"1"); var t=ws.getCell("C1"); t.value="ENERJİ TAKİP"; t.font={name:"Calibri",size:20,bold:true,color:{argb:XC.bandTxt}}; t.alignment={vertical:"middle"};
+        ws.mergeCells("C2:"+last+"2"); var s=ws.getCell("C2"); s.value=subtitle; s.font={name:"Calibri",size:11,bold:true,color:{argb:XC.amber}}; s.alignment={vertical:"middle"};
+        ws.mergeCells("C3:"+last+"3"); var d3=ws.getCell("C3"); d3.value=range+"      ·      Oluşturma: "+stamp; d3.font={name:"Calibri",size:9,color:{argb:"FFBCB2A2"}}; d3.alignment={vertical:"middle"};
+        ws.getColumn(1).width=5; ws.getColumn(2).width=7;
+        ws.getRow(1).height=26; ws.getRow(2).height=18; ws.getRow(3).height=16; ws.getRow(4).height=6;
+      }
+
+      /* ---- Sayfa 1: Günlük Özet ---- */
+      var ws=wb.addWorksheet("Günlük Özet",{views:[{showGridLines:false,state:"frozen",ySplit:5}]});
+      var head=["Tarih","Gün"]; devices.forEach(function(d){head.push(d.name+" — çalışma saatleri",d.name+" (sa)");}); head.push("Toplam kWh","Maliyet ₺","Boşa (sa)","Durum");
+      var N=head.length; letterhead(ws,N,"Ev Enerji İzleme Raporu");
+      var hr=ws.getRow(5); head.forEach(function(h,i){ var c=hr.getCell(i+1); c.value=h; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:XC.head}}; c.font={bold:true,size:10,color:{argb:XC.headTxt}}; c.alignment={vertical:"middle",horizontal:(i<2||typeof h==="string"&&h.indexOf("saatleri")>-1)?"left":"center",wrapText:true}; c.border=thinAll(); }); hr.height=22;
+
+      var sumK=0,sumW=0,ri=6;
+      history.forEach(function(day,di){
+        var p=day.date.split("-"), o=new Date(+p[0],+p[1]-1,+p[2]), g=o.getDay();
+        var vals=[day.date,DOW[g]], dayWaste=0, wasteCols=[];
+        devices.forEach(function(d){ var su=daySummary(d,o); vals.push(su.range, +su.on.toFixed(1)); dayWaste+=su.waste; if(su.waste>0.08) wasteCols.push(vals.length-2); });
+        var tk=dayTotalKwh(day); vals.push(+tk.toFixed(3), +(tk*PRICE).toFixed(2), +dayWaste.toFixed(1), dayWaste>0.08?"Boşa yanma":"Normal");
+        sumK+=tk; sumW+=dayWaste;
+        var row=ws.getRow(ri); vals.forEach(function(v,i){ var c=row.getCell(i+1); c.value=v; c.border=thinAll(); c.font={size:10,color:{argb:XC.ink}};
+          var isRange=(i>=2&&i<2+devices.length*2&&(i-2)%2===0);
+          c.alignment={vertical:"middle",horizontal:(i<2||isRange)?"left":"center"};
+          if(i===2+devices.length*2) c.numFmt="0.000"; if(i===3+devices.length*2) c.numFmt='#,##0.00" ₺"'; if(i===4+devices.length*2) c.numFmt="0.0";
+          if(di%2===1) c.fill={type:"pattern",pattern:"solid",fgColor:{argb:XC.zebra}};
+        });
+        wasteCols.forEach(function(ci){ var c=row.getCell(ci); c.fill={type:"pattern",pattern:"solid",fgColor:{argb:XC.wasteFill}}; c.font={size:10,color:{argb:XC.wasteTxt}}; });
+        var du=row.getCell(N); if(dayWaste>0.08){ du.fill={type:"pattern",pattern:"solid",fgColor:{argb:XC.wasteFill}}; du.font={size:10,bold:true,color:{argb:XC.wasteTxt}}; } else { du.fill={type:"pattern",pattern:"solid",fgColor:{argb:XC.okFill}}; du.font={size:10,bold:true,color:{argb:XC.okTxt}}; }
+        row.height=18; ri++;
+      });
+
+      var avg=history.length?sumK/history.length:0, kcol=3+devices.length*2, mcol=4+devices.length*2;
+      ri++;
+      function summaryRow(label,kv,mv,extra){
+        var row=ws.getRow(ri); var c1=row.getCell(1); c1.value=label; ws.mergeCells(ri,1,ri,2); c1.font={bold:true,size:10,color:{argb:XC.ink}}; c1.alignment={horizontal:"right",vertical:"middle"};
+        var ck=row.getCell(kcol); if(kv!=null){ck.value=kv;ck.numFmt="0.000";ck.font={bold:true,size:10};ck.alignment={horizontal:"center"};}
+        var cm=row.getCell(mcol); if(mv!=null){cm.value=mv;cm.numFmt='#,##0.00" ₺"';cm.font={bold:true,size:10,color:{argb:XC.amber}};cm.alignment={horizontal:"center"};}
+        if(extra!=null){ var ce=row.getCell(mcol+1); ce.value=extra; ce.numFmt="0.0"; ce.font={bold:true,size:10,color:{argb:XC.wasteTxt}}; ce.alignment={horizontal:"center"}; }
+        row.getCell(1).border={top:{style:"medium",color:{argb:XC.amber}}};
+        row.height=17; ri++;
+      }
+      summaryRow("TOPLAM",+sumK.toFixed(3),+(sumK*PRICE).toFixed(2),+sumW.toFixed(1));
+      summaryRow("Günlük ortalama",+avg.toFixed(3),+(avg*PRICE).toFixed(2),null);
+      summaryRow("Aylık tahmin (ort × 30)",+(avg*30).toFixed(2),+(avg*30*PRICE).toFixed(2),null);
+      var tr=ws.getRow(ri); tr.getCell(1).value="Tarife: "+PRICE.toFixed(2)+" ₺/kWh"; tr.getCell(1).font={italic:true,size:9,color:{argb:XC.muted}}; ri++;
+
+      ws.getColumn(1).width=12; ws.getColumn(2).width=7;
+      devices.forEach(function(d,i){ ws.getColumn(3+i*2).width=30; ws.getColumn(4+i*2).width=9; });
+      ws.getColumn(kcol).width=11; ws.getColumn(mcol).width=12; ws.getColumn(mcol+1).width=9; ws.getColumn(N).width=14;
+
+      /* ---- Sayfa 2: Çalışma Detayı ---- */
+      var d2=wb.addWorksheet("Çalışma Detayı",{views:[{showGridLines:false,state:"frozen",ySplit:5}]});
+      var H2=["Tarih","Cihaz","Başlangıç","Bitiş","Süre (sa)","Tür","kWh","Maliyet ₺"]; letterhead(d2,H2.length,"Açılma – Kapanma Seansları");
+      var h2=d2.getRow(5); H2.forEach(function(h,i){ var c=h2.getCell(i+1); c.value=h; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:XC.head}}; c.font={bold:true,size:10,color:{argb:XC.headTxt}}; c.alignment={horizontal:(i<2)?"left":"center",vertical:"middle"}; c.border=thinAll(); }); h2.height=20;
+      var r2=6;
+      history.forEach(function(day){ var p=day.date.split("-"),o=new Date(+p[0],+p[1]-1,+p[2]);
+        devices.forEach(function(d){ sessionsFor(d,o).forEach(function(x){
+          var tur=x.film?"Film 🎬":(x.u?"Faydalı":"Boşa"), vals=[day.date,d.name,hm(x.s),hm(x.e),+x.dur.toFixed(2),tur,+x.kwh.toFixed(3),+(x.kwh*PRICE).toFixed(2)];
+          var row=d2.getRow(r2); vals.forEach(function(v,i){ var c=row.getCell(i+1); c.value=v; c.border=thinAll(); c.font={size:10,color:{argb:XC.ink}}; c.alignment={horizontal:(i<2)?"left":"center",vertical:"middle"}; if(i===6)c.numFmt="0.000"; if(i===7)c.numFmt='#,##0.00" ₺"'; });
+          if(!x.u){ for(var k=1;k<=H2.length;k++){ row.getCell(k).fill={type:"pattern",pattern:"solid",fgColor:{argb:XC.wasteFill}}; row.getCell(k).font={size:10,color:{argb:XC.wasteTxt}}; } }
+          else if(x.film){ row.getCell(6).font={size:10,bold:true,color:{argb:XC.amber}}; }
+          row.height=17; r2++;
+        }); });
+      });
+      [12,12,11,11,10,12,10,11].forEach(function(w,i){ d2.getColumn(i+1).width=w; });
+
+      /* ---- Sayfa 3: Boşa Çalışma ---- */
+      var d3=wb.addWorksheet("Boşa Çalışma",{views:[{showGridLines:false,state:"frozen",ySplit:5}]});
+      var H3=["Tarih","Gün","Cihaz","Saat aralığı","Süre (sa)","Kayıp kWh","Kayıp ₺"]; letterhead(d3,H3.length,"Boşa Yanan Saatler");
+      var h3=d3.getRow(5); H3.forEach(function(h,i){ var c=h3.getCell(i+1); c.value=h; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:XC.head}}; c.font={bold:true,size:10,color:{argb:XC.headTxt}}; c.alignment={horizontal:(i<3)?"left":"center",vertical:"middle"}; c.border=thinAll(); }); h3.height=20;
+      var r3=6,lostK=0,lostH=0;
+      history.forEach(function(day){ var p=day.date.split("-"),o=new Date(+p[0],+p[1]-1,+p[2]),g=o.getDay();
+        devices.forEach(function(d){ sessionsFor(d,o).forEach(function(x){ if(x.u)return; lostK+=x.kwh; lostH+=x.dur;
+          var vals=[day.date,DOW[g],d.name,hm(x.s)+"–"+hm(x.e),+x.dur.toFixed(2),+x.kwh.toFixed(3),+(x.kwh*PRICE).toFixed(2)];
+          var row=d3.getRow(r3); vals.forEach(function(v,i){ var c=row.getCell(i+1); c.value=v; c.border=thinAll(); c.font={size:10,color:{argb:XC.wasteTxt}}; c.alignment={horizontal:(i<3)?"left":"center",vertical:"middle"}; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:XC.wasteFill}}; if(i===5)c.numFmt="0.000"; if(i===6)c.numFmt='#,##0.00" ₺"'; });
+          row.height=17; r3++;
+        }); });
+      });
+      if(r3===6){ var e=d3.getRow(6).getCell(1); e.value="Boşa yanma kaydı yok 👍"; d3.mergeCells(6,1,6,H3.length); e.alignment={horizontal:"center"}; e.font={italic:true,color:{argb:XC.okTxt}}; r3++; }
+      var tot=d3.getRow(r3+1); tot.getCell(1).value="TOPLAM KAYIP"; d3.mergeCells(r3+1,1,r3+1,4); tot.getCell(1).font={bold:true,color:{argb:XC.ink}}; tot.getCell(1).alignment={horizontal:"right"};
+      tot.getCell(5).value=+lostH.toFixed(1); tot.getCell(5).numFmt="0.0"; tot.getCell(5).font={bold:true};
+      tot.getCell(6).value=+lostK.toFixed(3); tot.getCell(6).numFmt="0.000"; tot.getCell(6).font={bold:true};
+      tot.getCell(7).value=+(lostK*PRICE).toFixed(2); tot.getCell(7).numFmt='#,##0.00" ₺"'; tot.getCell(7).font={bold:true,color:{argb:XC.wasteTxt}}; tot.getCell(5).border={top:{style:"medium",color:{argb:XC.amber}}};
+      [12,6,12,16,10,11,11].forEach(function(w,i){ d3.getColumn(i+1).width=w; });
+
+      var buf=await wb.xlsx.writeBuffer();
+      var blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+      var url=URL.createObjectURL(blob), a=document.createElement("a"); a.href=url; a.download="enerji-takip-raporu.xlsx"; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){URL.revokeObjectURL(url);},1500);
+      showToast("Excel indirildi");
+    }catch(e){ showToast("İndirme bu önizlemede engelli — kendi sitende çalışır"); }
   }
   document.getElementById("xlsBtn").addEventListener("click",exportXls);
 
