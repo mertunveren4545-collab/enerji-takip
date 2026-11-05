@@ -259,6 +259,49 @@
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
   .toast svg{ color:var(--accent); flex:none; }
   @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition-duration:.01ms !important; } }
+  /* CANLI AMPUL — gerçek Tapo L530E, ev sunucusu üzerinden */
+  .live{ position:relative; overflow:hidden; margin:0 0 30px; padding:18px 18px 16px; }
+  .live::after{ content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(120% 90% at 0% 0%, color-mix(in srgb,var(--accent) calc(var(--lv,0) * 22%),transparent), transparent 60%); transition:background .6s; }
+  .live > *{ position:relative; z-index:1; }
+  .live-h{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  .live-t{ display:flex; align-items:center; gap:11px; min-width:0; }
+  .live-t div{ display:flex; flex-direction:column; min-width:0; line-height:1.25; }
+  .live-t b{ font-family:var(--font-d); font-weight:500; font-size:1.08rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .live-t span{ font-size:.74rem; color:var(--muted); }
+  .live-tag{ font-family:var(--font-b); font-size:.6rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line)); border-radius:6px; padding:1px 6px; margin-left:6px; vertical-align:2px; }
+  .live-dot{ width:9px; height:9px; border-radius:50%; flex:none; background:var(--faint); }
+  .live-dot.ok{ background:var(--ok); box-shadow:0 0 10px 1px var(--ok); animation:ledpulse 2.6s ease-in-out infinite; }
+  .live-dot.err{ background:var(--busy); box-shadow:0 0 10px 1px var(--busy); }
+  .live-main{ display:flex; align-items:center; gap:16px; }
+  .live-pwr{ width:74px; height:74px; flex:none; border-radius:50%; border:1px solid var(--line); background:var(--panel-2); color:var(--faint); display:grid; place-items:center; cursor:pointer; transition:all .25s; }
+  .live-pwr:active{ transform:scale(.94); }
+  .live-pwr.on{ color:#1a1205; border-color:transparent; background:radial-gradient(circle at 35% 30%, var(--gold), var(--accent) 70%); box-shadow:0 0 34px -4px color-mix(in srgb,var(--accent) 80%,transparent); }
+  .live-pwr[disabled]{ opacity:.5; cursor:progress; }
+  .live-ctl{ flex:1; min-width:0; }
+  .live-state{ font-family:var(--font-d); font-weight:500; font-size:1.5rem; line-height:1; }
+  .live-w{ font-size:.76rem; color:var(--muted); margin-top:5px; }
+  .live-w b{ color:var(--fg); font-weight:600; }
+  .live-br{ display:flex; align-items:center; gap:10px; margin-top:12px; }
+  .live-br svg{ color:var(--faint); flex:none; }
+  .live-br output{ font-size:.76rem; font-weight:600; color:var(--muted); min-width:36px; text-align:right; }
+  .live-rng{ -webkit-appearance:none; appearance:none; flex:1; height:6px; border-radius:6px; background:linear-gradient(to right,var(--accent) var(--p,50%),var(--line) var(--p,50%)); outline:none; }
+  .live-rng::-webkit-slider-thumb{ -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:var(--fg); border:3px solid var(--accent); cursor:pointer; }
+  .live-rng::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:var(--fg); border:3px solid var(--accent); cursor:pointer; }
+  .live-rng:disabled{ opacity:.4; }
+  .live-st{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:16px; }
+  .live-st .dd-stat b{ font-size:1.05rem; }
+  .live-msg{ font-size:.8rem; color:var(--muted); margin:0 0 12px; line-height:1.5; }
+  .live-msg.err{ color:var(--busy); }
+  .live-cta{ width:100%; justify-content:center; padding:12px; }
+  .fld{ display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .fld label{ font-size:.74rem; font-weight:600; color:var(--muted); }
+  .fld input{ font:inherit; font-size:.9rem; padding:11px 13px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2); color:var(--fg); width:100%; }
+  .fld input:focus{ outline:none; border-color:var(--accent); }
+  .fld small{ font-size:.7rem; color:var(--faint); }
+  .sheet-btns{ display:flex; gap:10px; margin-top:6px; }
+  .sheet-btns .xbtn{ flex:1; justify-content:center; padding:11px; }
+  .xbtn.pri{ background:var(--accent); color:#1a1205; border-color:var(--accent); }
+  .xbtn.ghost{ color:var(--muted); }
 </style>
 
 <div class="ambient" id="ambient"></div>
@@ -293,13 +336,21 @@
       <div class="stat"><div class="k">En yoğun</div><div class="v" id="qPeak">—</div></div>
     </div>
 
+    <div class="live card" id="liveCard">
+      <div class="live-h">
+        <div class="live-t"><span class="live-dot" id="liveDot"></span><div><b><span id="liveName">Canlı ampul</span><span class="live-tag">Gerçek</span></b><span id="liveSub">Bağlı değil</span></div></div>
+        <button class="ib" id="liveSet" aria-label="Ampul bağlantı ayarları"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
+      </div>
+      <div id="liveBody"></div>
+    </div>
+
     <div class="sec-t"><h2>Senaryolar</h2></div>
     <div class="scenes" id="scenes"></div>
 
     <div class="sec-t"><h2>Cihazlar</h2><span class="u" id="devCount"></span></div>
     <div class="dlist" id="devList"></div>
     <button class="add-dev" id="addBtn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Cihaz ekle</button>
-    <p class="proto">Prototip · sürüm 5 · Akhisar güneş verisiyle</p>
+    <p class="proto">Prototip · sürüm 6 · canlı Tapo ampul + Akhisar güneş verisi</p>
   </section>
 
   <section id="v-report" hidden>
@@ -822,6 +873,129 @@
   },1000);
 
   refresh();
+})();
+</script>
+<script>
+/* CANLI AMPUL — ev sunucusu (Termux) üzerinden gerçek Tapo L530E kontrolü ve gerçek enerji ölçümü */
+(function(){
+  "use strict";
+  var K_URL="etakip-sunucu", K_KEY="etakip-anahtar", POLL_MS=10000;
+  var srv="", key="", st=null, busy=false, lastErr="", timer=null;
+  var body=document.getElementById("liveBody"), card=document.getElementById("liveCard");
+  var dot=document.getElementById("liveDot"), nameEl=document.getElementById("liveName"), sub=document.getElementById("liveSub");
+
+  function ls(k,v){ try{ if(v===undefined) return localStorage.getItem(k)||""; if(v===null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){ return ""; } }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c];}); }
+  function n(x,d){ return Number(x||0).toLocaleString("tr-TR",{minimumFractionDigits:d,maximumFractionDigits:d}); }
+  function toast(msg){ var t=document.getElementById("toast"); if(!t){ t=document.createElement("div"); t.id="toast"; t.className="toast"; document.body.appendChild(t); } t.innerHTML='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>'+esc(msg); requestAnimationFrame(function(){ t.classList.add("show"); }); clearTimeout(toast._t); toast._t=setTimeout(function(){ t.classList.remove("show"); },2400); }
+  function cleanUrl(u){ u=(u||"").trim().replace(/\/+$/,""); if(u&&!/^https?:\/\//i.test(u)) u="https://"+u; return u; }
+
+  // QR / bağlantı linkiyle gelindiyse (#sunucu=...&anahtar=...) otomatik kaydet
+  function readHash(){
+    var h=location.hash.replace(/^#/,""); if(!/sunucu=/.test(h)) return false;
+    var p={}; h.split("&").forEach(function(kv){ var i=kv.indexOf("="); if(i>0) p[kv.slice(0,i)]=decodeURIComponent(kv.slice(i+1)); });
+    try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
+    if(!(p.sunucu&&p.anahtar)) return false;
+    ls(K_URL,cleanUrl(p.sunucu)); ls(K_KEY,p.anahtar);
+    setTimeout(function(){ toast("Ampul bağlantısı kaydedildi"); },400);
+    return true;
+  }
+  readHash();
+  srv=ls(K_URL); key=ls(K_KEY);
+
+  function api(path,data){
+    var ctl=new AbortController(), to=setTimeout(function(){ ctl.abort(); },12000);
+    var opt={ method:data?"POST":"GET", headers:{"X-Anahtar":key}, signal:ctl.signal, cache:"no-store" };
+    if(data){ opt.headers["Content-Type"]="application/json"; opt.body=JSON.stringify(data); }
+    return fetch(srv+path,opt).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(j){
+        if(r.status===401) throw new Error("Anahtar yanlış — ayarları kontrol et");
+        if(!r.ok) throw new Error(j.hata||("Sunucu hatası ("+r.status+")"));
+        return j;
+      });
+    }, function(e){ throw new Error(e.name==="AbortError"?"Sunucu yanıt vermedi":"Sunucuya ulaşılamıyor — telefon açık mı, adres değişti mi?"); })
+    .finally(function(){ clearTimeout(to); });
+  }
+
+  var bulbIc='<path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/>';
+  var pwrIc='<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>';
+
+  function render(){
+    if(!srv||!key){
+      dot.className="live-dot"; nameEl.textContent="Canlı ampul"; sub.textContent="Bağlı değil";
+      card.style.setProperty("--lv",0);
+      body.innerHTML='<p class="live-msg">Evdeki sunucuyu bağlayınca Tapo ampulünü buradan açıp kapatır, gerçek tüketimini görürsün. En kolayı: yedek telefondaki QR kodunu bu telefonla okut.</p><button class="xbtn live-cta" id="liveCta">Sunucuya bağlan</button>';
+      document.getElementById("liveCta").onclick=openSettings; return;
+    }
+    if(!st){
+      dot.className="live-dot"+(lastErr?" err":""); sub.textContent=lastErr?"Bağlantı yok":"Bağlanıyor…";
+      body.innerHTML=lastErr?'<p class="live-msg err">'+esc(lastErr)+'</p><button class="xbtn live-cta" id="liveRetry">Tekrar dene</button>':'<p class="live-msg">Ampulün durumu alınıyor…</p>';
+      var rb=document.getElementById("liveRetry"); if(rb) rb.onclick=function(){ lastErr=""; render(); poll(); };
+      return;
+    }
+    var on=st.cevrimici&&st.acik, ok=st.cevrimici&&!lastErr;
+    dot.className="live-dot "+(ok?"ok":"err");
+    nameEl.textContent=st.ad||"Ampul";
+    sub.textContent=lastErr?"Sunucuya ulaşılamıyor":(st.cevrimici?"Tapo L530E · canlı":"Ampul çevrimdışı");
+    card.style.setProperty("--lv",on?Math.max(.25,st.parlaklik/100):0);
+    var dis=(busy||!st.cevrimici||lastErr)?" disabled":"";
+    var msg=lastErr?'<p class="live-msg err">'+esc(lastErr)+'</p>':(!st.cevrimici?'<p class="live-msg err">Sunucu çalışıyor ama ampule ulaşamıyor. Ampul elektrikte ve WiFi\'de mi? '+esc(st.hata||"")+'</p>':"");
+    body.innerHTML=msg+
+      '<div class="live-main">'+
+        '<button class="live-pwr'+(on?" on":"")+'" id="livePwr" aria-label="'+(on?"Kapat":"Aç")+'"'+dis+'>'+pwrIc+'</button>'+
+        '<div class="live-ctl"><div class="live-state">'+(on?"Açık":"Kapalı")+'</div>'+
+        '<div class="live-w">Şu an <b>'+n(st.watt,1)+' W</b> · bugün '+n(st.bugun.saat,1)+' sa açık</div>'+
+        '<div class="live-br"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'+
+        '<input class="live-rng" id="liveRng" type="range" min="1" max="100" value="'+(st.parlaklik||1)+'" style="--p:'+(st.parlaklik||1)+'%" aria-label="Parlaklık"'+dis+'><output id="liveRngV">%'+(st.parlaklik||1)+'</output></div></div>'+
+      '</div>'+
+      '<div class="live-st"><div class="dd-stat"><b>'+n(st.bugun.kwh*1000,0)+' Wh</b><span>Bugün</span></div><div class="dd-stat"><b>'+n(st.bugun.tl,2)+' ₺</b><span>Bugün maliyet</span></div><div class="dd-stat"><b>'+n(st.ay.tl,2)+' ₺</b><span>Bu ay · '+n(st.ay.kwh,2)+' kWh</span></div></div>';
+    document.getElementById("livePwr").onclick=function(){ setPower(!on); };
+    var rng=document.getElementById("liveRng"), out=document.getElementById("liveRngV");
+    rng.oninput=function(){ out.textContent="%"+rng.value; rng.style.setProperty("--p",rng.value+"%"); };
+    rng.onchange=function(){ setBright(+rng.value); };
+  }
+
+  function act(path,data,okMsg){
+    if(busy) return; busy=true; render();
+    api(path,data).then(function(j){ st=j; lastErr=""; if(okMsg) toast(okMsg); })
+      .catch(function(e){ toast(e.message); })
+      .finally(function(){ busy=false; render(); });
+  }
+  function setPower(on){ if(st){ st.acik=on; } act("/api/guc",{acik:on},on?"Ampul açıldı":"Ampul kapatıldı"); }
+  function setBright(v){ act("/api/parlaklik",{deger:v},"Parlaklık %"+v); }
+
+  function poll(){
+    if(!srv||!key||busy) return;
+    api("/api/durum").then(function(j){ st=j; lastErr=""; }).catch(function(e){ lastErr=e.message; }).finally(render);
+  }
+  function startPoll(){ clearInterval(timer); if(srv&&key){ poll(); timer=setInterval(function(){ if(document.visibilityState==="visible") poll(); },POLL_MS); } }
+  document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible") poll(); });
+
+  function openSettings(){
+    var bg=document.createElement("div"); bg.className="sheet-bg";
+    bg.innerHTML='<div class="sheet"><div class="grab"></div><h3>Ampul bağlantısı</h3><p class="sub">Yedek telefondaki sunucunun bilgileri. QR kodunu okutursan bunlar kendiliğinden dolar.</p>'+
+      '<div class="fld"><label for="fUrl">Sunucu adresi</label><input id="fUrl" type="url" inputmode="url" autocomplete="off" placeholder="https://….trycloudflare.com" value="'+esc(srv)+'"><small>Sunucu her yeniden başladığında bu adres değişir.</small></div>'+
+      '<div class="fld"><label for="fKey">Anahtar</label><input id="fKey" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Sunucu ekranındaki UYGULAMA ANAHTARI" value="'+esc(key)+'"></div>'+
+      '<p class="live-msg" id="fMsg"></p>'+
+      '<div class="sheet-btns">'+(srv?'<button class="xbtn ghost" id="fDel">Bağlantıyı kaldır</button>':'')+'<button class="xbtn pri" id="fSave">Kaydet ve dene</button></div></div>';
+    bg.addEventListener("click",function(e){ if(e.target===bg) bg.remove(); });
+    document.body.appendChild(bg);
+    var fMsg=bg.querySelector("#fMsg");
+    bg.querySelector("#fSave").onclick=function(){
+      var u=cleanUrl(bg.querySelector("#fUrl").value), k=bg.querySelector("#fKey").value.trim();
+      if(!u||!k){ fMsg.className="live-msg err"; fMsg.textContent="Adres ve anahtar ikisi de gerekli."; return; }
+      var oldS=srv, oldK=key; srv=u; key=k; fMsg.className="live-msg"; fMsg.textContent="Bağlanılıyor…";
+      api("/api/durum").then(function(j){
+        ls(K_URL,srv); ls(K_KEY,key); st=j; lastErr=""; bg.remove(); toast("Bağlandı: "+(j.ad||"Ampul")); render(); startPoll();
+      }).catch(function(e){ srv=oldS; key=oldK; fMsg.className="live-msg err"; fMsg.textContent=e.message; });
+    };
+    var del=bg.querySelector("#fDel");
+    if(del) del.onclick=function(){ ls(K_URL,null); ls(K_KEY,null); srv=""; key=""; st=null; lastErr=""; clearInterval(timer); bg.remove(); render(); toast("Bağlantı kaldırıldı"); };
+  }
+  document.getElementById("liveSet").onclick=openSettings;
+
+  window.addEventListener("hashchange",function(){ if(readHash()){ srv=ls(K_URL); key=ls(K_KEY); st=null; lastErr=""; render(); startPoll(); } });
+  render(); startPoll();
 })();
 </script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
